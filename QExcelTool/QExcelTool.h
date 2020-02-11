@@ -5,23 +5,25 @@
 #include <string>
 #include <Windows.h>
 #include "ui_QExcelTool.h"
-#include "QtXlsxWriter\xlsxdocument.h"
-#include "QtXlsxWriter\xlsxformat.h"
-#include "QtXlsxWriter\xlsxcellrange.h"
-#include "QtXlsxWriter\xlsxworksheet.h"
+#include "QtXlsxWriter\\xlsxdocument.h"
+#include "QtXlsxWriter\\xlsxformat.h"
+#include "QtXlsxWriter\\xlsxcellrange.h"
+#include "QtXlsxWriter\\xlsxworksheet.h"
 
 #define QETERROR_NOERROR		0
 #define QETERROR_NOFILESELECTED	1
 #define QETERROR_FILEOPENFAIL	2
 
-#define QETFILETYPE_CSV 0
-#define QETFILETYPE_XLS 1
-#define QETFILETYPE_XLSX 2
+#define QETFILETYPE_CSV			0
+#define QETFILETYPE_XLS			1
+#define QETFILETYPE_XLSX		2
 
-extern int err, ftype;
-extern QStatusBar* statbar;
+extern int err, ftype, ntvline, ntvrow;
+extern QStatusBar* xstatusBar;
 extern QFile* xfile;
 extern std::string content;
+extern QTableView* xtableView;
+
 
 class QExcelTool : public QMainWindow
 {

@@ -29,7 +29,7 @@
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
-      <x>40</x>
+      <x>30</x>
       <y>20</y>
       <width>131</width>
       <height>31</height>
@@ -42,9 +42,9 @@
    <widget class="QPushButton" name="pushButton_1">
     <property name="geometry">
      <rect>
-      <x>920</x>
+      <x>931</x>
       <y>20</y>
-      <width>112</width>
+      <width>101</width>
       <height>31</height>
      </rect>
     </property>
@@ -55,11 +55,34 @@
    <widget class="QTextBrowser" name="textBrowser">
     <property name="geometry">
      <rect>
-      <x>170</x>
+      <x>160</x>
       <y>20</y>
-      <width>741</width>
+      <width>761</width>
       <height>31</height>
      </rect>
+    </property>
+   </widget>
+   <widget class="QTableView" name="tableView">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>100</y>
+      <width>1011</width>
+      <height>371</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>80</y>
+      <width>121</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>文件内容：</string>
     </property>
    </widget>
   </widget>
@@ -72,12 +95,6 @@
      <height>29</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menu">
-    <property name="title">
-     <string>关于</string>
-    </property>
-   </widget>
-   <addaction name="menu"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
