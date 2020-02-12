@@ -3,13 +3,14 @@
 #include <QMessageBox>
 #include <QStandardItemModel>
 #include <QFileDialog>
+#include <QTextStream>
+#include <iostream>
 
 int err = 0, ftype = -1, ntvline = 0, ntvrow = 0;
 QStatusBar* xstatusBar = nullptr;
 QFile* xfile = nullptr;
 QTableView* xtableView = nullptr;
 std::string content;
-
 
 QExcelTool::QExcelTool(QWidget* parent)
 	: QMainWindow(parent)
@@ -21,6 +22,7 @@ QExcelTool::QExcelTool(QWidget* parent)
 	connect(ui.pushButton_1, SIGNAL(clicked()), this, SLOT(openxlsfile()));
 	xstatusBar = ui.statusBar;
 	ui.statusBar->showMessage(QString::fromLocal8Bit("就绪"));
+
 
 	QStandardItemModel* model = new QStandardItemModel();
 	QStringList labels = QString::fromLocal8Bit("频率,功率,误差").simplified().split(",");
@@ -68,12 +70,9 @@ void QExcelTool::openxlsfile()
 	}
 }
 
-inline void printqsl(QStringList src)
+inline bool isempty(QString src)
 {
-	for (int i = 0; i < src.size(); i++)
-	{
-		qDebug(src.at(i).toStdString().c_str())
-	}
+	return src.isNull() || src.isEmpty();
 }
 
 //new thread
@@ -81,27 +80,36 @@ DWORD WINAPI ReadFile(LPVOID param)
 {
 	xstatusBar->showMessage(QString::fromLocal8Bit("信息：读取文件..."));
 	QString qs = xfile->readAll();
+	QString tabletitle;
 	xfile->close();
 	QStringList qsl = qs.split('\n');
+	QStringList title, linetitle, rowtitle;
 	size_t ssize = qs.length();
-	int pos = 0, rmax = 0;
+	int pos = 0, rmax = 0, temp = 0;
+
 	for (int i = 0; i < qsl.size(); i++)
 	{
 		rmax = 0;
 		for (int j = 0; j < qsl.at(i).length(); j++)
-		{
 			rmax += (qsl.at(i).at(j) == ',');
-		}
 		ntvrow = ntvrow > rmax ? ntvrow : rmax;
 	}
 	ntvline = qsl.size() - 2;
-	//generate table head
+
 	for (int i = 0; i < qsl.size(); i++)
 	{
 		QStringList lline = qsl.at(i).split(',');
-		if (lline.size() > 2 && (((!lline.at(0).isEmpty()) || (!lline.at(0).isNull()))) && (lline.at(1).isEmpty() || lline.at(1).isNull()))
-			qsl.removeAt(i);//remove useless line
+		int size = lline.size();
+		temp = size;
+		for (int j = 0; j < lline.size(); j++)
+			temp -= isempty(lline.at(j));/////////////
+		if (temp == 1)
+			title << qsl.at(i).split(',').at(0);
 	}
+
+	tabletitle = title.join(' ');
+	title.clear();
+
 	for (int i = 0; i < qsl.size(); i++)
 	{
 		QStringList lline = qsl.at(i).split(',');
@@ -109,9 +117,10 @@ DWORD WINAPI ReadFile(LPVOID param)
 		{
 			if ((!lline.at(j).isEmpty()) && ((lline.at(j + 1).isEmpty())))
 			{
+				lline.removeAt(j);
 				lline.insert(j + 1, lline.at(j));
-				for (int k = 0; k < lline.size(); k++)
-					qDebug("lline[%d]:%s",k,lline.at(k).toStdString().c_str());
+				qDebug(lline.join(',').toStdString().c_str());
+				;
 			}
 
 		}
