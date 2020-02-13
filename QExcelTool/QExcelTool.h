@@ -18,26 +18,34 @@
 #define QETFILETYPE_XLS			1
 #define QETFILETYPE_XLSX		2
 
+#define QETDECODER_DEFAULT		0
+#define QETDECODER_UNICODE		1
+#define QETDECODER_LOCAL8BIT	2
+#define QETDECODER_LATIN1		3
+#define QETDECODER_DECCOUNT		4
+
 extern int err, ftype, ntvline, ntvrow;
 extern QStatusBar* xstatusBar;
 extern QFile* xfile;
-extern std::string content;
+extern QString xpath;
+//extern std::string content;
 extern QTableView* xtableView;
+
 
 
 class QExcelTool : public QMainWindow
 {
 	Q_OBJECT
+
+
 public slots:
-	void openxlsfile();
+	void OpenFile();
+	void ChangeDec();
 
 public:
 	QExcelTool(QWidget* parent = Q_NULLPTR);
-
 private:
 	Ui::QExcelToolClass ui;
-	QFile* fxls;
-	QString fpath;
 };
 
 DWORD WINAPI ReadFile(LPVOID param);
