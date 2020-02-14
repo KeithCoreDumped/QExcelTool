@@ -24,7 +24,7 @@
 #define QETDECODER_LATIN1		3
 #define QETDECODER_DECCOUNT		4
 
-extern int err, ftype, ntvline, ntvrow;
+extern int err, ntvline, ntvrow;
 extern QStatusBar* xstatusBar;
 extern QFile* xfile;
 extern QString xpath;
@@ -40,7 +40,7 @@ class QExcelTool : public QMainWindow
 
 public slots:
 	void OpenFile();
-	void ChangeDec();
+	void oncomboBoxcurrentIndexChanged(const QString& arg1);
 
 public:
 	QExcelTool(QWidget* parent = Q_NULLPTR);
@@ -49,3 +49,4 @@ private:
 };
 
 DWORD WINAPI ReadFile(LPVOID param);
+DWORD WINAPI FileProcess(LPVOID param);

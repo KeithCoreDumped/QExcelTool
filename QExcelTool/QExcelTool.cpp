@@ -1,19 +1,38 @@
 #include "QExcelTool.h"
 #include <QFile>
 #include <QMessageBox>
+#include <QImage>
 #include <QStandardItemModel>
 #include <QFileDialog>
 #include <QTextStream>
 #include <QTextCodec>
 
-int err = 0, ftype = -1, ntvline = 0, ntvrow = 0, xdec = 0;
+int err = 0, ntvline = 0, ntvrow = 0, xdec = 0;
 QStatusBar* xstatusBar = nullptr;
 QFile* xfile = nullptr;
 QTableView* xtableView = nullptr;
+QComboBox* xcomboBox;
 QString xpath, xcontent;
-QPushButton* xqpb;
+QByteArray xraw;
 QStandardItemModel* model;
+QTextCodec* xcodec;
 
+typedef enum tagTextCodeType
+{
+	TextUnkonw = -1,
+	TextANSI = 0,
+	TextUTF8,
+	TextUNICODE,
+	TextUNICODE_BIG
+}TextCodeType;
+
+TextCodeType xftype = TextUnkonw;
+
+/******************************************************************************************************/
+inline bool isempty(QString src)
+{
+	return src.isNull() || src.isEmpty();
+}
 /******************************************************************************************************/
 QExcelTool::QExcelTool(QWidget* parent)
 	: QMainWindow(parent)
@@ -22,11 +41,12 @@ QExcelTool::QExcelTool(QWidget* parent)
 	ui.statusBar->setSizeGripEnabled(false);
 	ui.tableView->setShowGrid(true);
 	xfile = nullptr;
-	xqpb = ui.ChangeDecButton;
 	xtableView = ui.tableView;
 	connect(ui.pushButton_1, SIGNAL(clicked()), this, SLOT(OpenFile()));
-	connect(ui.ChangeDecButton, SIGNAL(clicked()), this, SLOT(ChangeDec()));
+	QObject::connect(ui.comboBox, SIGNAL(activated(const QString&)), this, SLOT(oncomboBoxcurrentIndexChanged(const QString&)));
+
 	xstatusBar = ui.statusBar;
+	ui.comboBox->setVisible(0);
 	ui.statusBar->showMessage(QString::fromLocal8Bit("就绪"));
 	ui.textBrowser->setToolTipDuration(1000);
 	model = new QStandardItemModel();
@@ -34,11 +54,6 @@ QExcelTool::QExcelTool(QWidget* parent)
 	//model->setHorizontalHeaderLabels(labels);
 	//ui.tableView->setModel(model);
 	//ui.tableView->show();
-}
-/******************************************************************************************************/
-inline bool isempty(QString src)
-{
-	return src.isNull() || src.isEmpty();
 }
 /******************************************************************************************************/
 QString getlinename(unsigned int i)
@@ -51,38 +66,112 @@ QString getlinename(unsigned int i)
 		return getlinename(i / 26 - 1) + QString(0x41 + i % 26);
 }
 /******************************************************************************************************/
+void QExcelTool::OpenFile()
+{
+	//reset global variables
+	err = 0, ntvline = 0, ntvrow = 0, xdec = 0;
+	xfile = nullptr;
+	xpath.clear();
+	xcontent.clear();
+	//open file
+	xpath = QFileDialog::getOpenFileName(this, QString::fromLocal8Bit("打开表格文件"), ".", QString::fromLocal8Bit("表格文件(*.csv)")).replace("/", "\\");
+	ui.textBrowser->setText(xpath);
+	if (xpath.isEmpty())
+	{
+		ui.statusBar->showMessage(QString::fromLocal8Bit("错误：未选择文件"));
+		err = QETERROR_NOFILESELECTED;
+	}
+	else
+	{
+		xfile = new QFile(xpath);
+		xfile->open(QIODevice::ReadOnly | QIODevice::Text);
+		if (!xfile->isOpen())//open file failed
+		{
+			ui.statusBar->showMessage(QString::fromLocal8Bit("错误：打开文件失败（%1)").arg(xfile->errorString()));
+			err = QETERROR_FILEOPENFAIL;
+		}
+		else
+		{
+			//QString fname = xpath.mid(xpath.lastIndexOf('\\') + 1);
+			//xstatusBar->showMessage(QString::fromLocal8Bit("信息：打开文件成功\t文件名：\"%1\"").arg(fname));
+			//QString fext = fname.mid(fname.lastIndexOf('.') + 1);
+			//ftype = (fext == "csv" ? QETFILETYPE_CSV : (fext == "xls" ? QETFILETYPE_XLS : (fext == "xlsx" ? QETFILETYPE_XLSX : -1)));
+			//if (ftype == -1)
+			//{
+			//	QMessageBox::critical(this, "ERROR", "Unknown Error");
+			//	QApplication::quit();
+			//}
+			err = QETERROR_NOERROR;
+			CreateThread(NULL, 0, ReadFile, NULL, NULL, NULL);
+		}
+	}
+}
+/******************************************************************************************************/
+void QExcelTool::oncomboBoxcurrentIndexChanged(const QString& arg1)
+{
+	if (QString::compare(arg1, "ANSI") == 0)
+		xftype = TextANSI;
+	else if (QString::compare(arg1, "UTF-8") == 0)
+		xftype = TextUTF8;
+	else if (QString::compare(arg1, "UTF-16") == 0)
+		xftype = TextUNICODE;
+	else if (QString::compare(arg1, "UTF-16BE") == 0)
+		xftype = TextUNICODE_BIG;
+	if (xfile && xfile->isOpen())
+		CreateThread(NULL, 0, FileProcess, NULL, NULL, NULL);
+}
+/******************************************************************************************************/
+//new thread
+DWORD WINAPI ReadFile(LPVOID param)
+{
+	xstatusBar->showMessage(QString::fromLocal8Bit("信息：读取文件...\t文件名：\"%1\"").arg(xpath));
+	int decoder = xdec;
+	xraw = xfile->readAll();
+	xfile->close();
+	unsigned char headBuf[3] = { 0 };
+	headBuf[0] = xraw.at(0);
+	headBuf[1] = xraw.at(1);
+	headBuf[2] = xraw.at(2);
+	if (headBuf[0] == 0xEF && headBuf[1] == 0xBB && headBuf[2] == 0xBF)//utf8-bom 文件开头：FF BB BF,不带bom稍后解决
+		xftype = TextUTF8;
+	else if (headBuf[0] == 0xFF && headBuf[1] == 0xFE)//小端Unicode  文件开头：FF FE  intel x86架构自身是小端存储，可直接读取
+		xftype = TextUNICODE;
+	else if (headBuf[0] == 0xFE && headBuf[1] == 0xFF)//大端Unicode  文件开头：FE FF
+		xftype = TextUNICODE_BIG;
+	else
+		xftype = TextANSI;    //ansi或者unf8 无bom
+
+	CreateThread(NULL, 0, FileProcess, NULL, NULL, NULL);
+	return 0;
+}
+/******************************************************************************************************/
 DWORD WINAPI FileProcess(LPVOID param)
 {
-	int decoder = xdec;
 	QString tabletitle;
 	QStringList qsl, title, linetitle, rowtitle;
-
-	//select decoder
-	switch (decoder)
+	switch (xftype)
 	{
-	case QETDECODER_DEFAULT:
-		;
+	case TextUTF8:
+		xcodec = QTextCodec::codecForName("UTF-8");
 		break;
-	case QETDECODER_UNICODE:
-		xcontent = QString(xcontent.unicode());
+	case TextUNICODE:
+		xcodec = QTextCodec::codecForName("UTF-16");
 		break;
-	case QETDECODER_LOCAL8BIT:
-		xcontent = xcontent.toLocal8Bit();
+	case TextUNICODE_BIG:
+		xcodec = QTextCodec::codecForName("UTF-16LE");
 		break;
-	case QETDECODER_LATIN1:
-		xcontent = xcontent.toLatin1();
+	case TextANSI:
+		xcodec = QTextCodec::codecForName("GBK");
 		break;
 	default:
 		break;
 	}
-
+	xcontent = xcodec->toUnicode(xraw);
 	while (xcontent.back() == QChar('\n'))
 		xcontent.chop(1);
-
 	qsl = xcontent.split('\n', QString::SkipEmptyParts);
 	size_t ssize = xcontent.length();
 	int rmax = 0, temp = 0;
-
 	for (int i = 0; i < qsl.size(); i++)
 	{
 		rmax = 0;
@@ -114,95 +203,25 @@ DWORD WINAPI FileProcess(LPVOID param)
 	model->setRowCount(ntvline);
 	QStringList linename, rowname, qsltp;
 	QString qstp;
-	//QList<QStandardItem*> qsi;
 	for (int i = 1; i < ntvline; i++)
 		model->setHeaderData(i - 1, Qt::Vertical, QString::fromLocal8Bit("列") + QString::number(i));
 	for (int i = 0; i < ntvrow; i++)
 		model->setHeaderData(i, Qt::Horizontal, QString::fromLocal8Bit("行") + getlinename(i));
 
-	QList<QStandardItem*> data;
-
-
-
-	for (int i = 0; i < ntvline; i++)
+	for (int i = 0; i < ntvline - 1; i++)
 	{
-		for (int j = 0; j < ntvrow; j++)
+		qstp = qsl.at(i);
+		qsltp = qstp.split(',');
+		for (int j = 0; j < qsltp.size(); j++)
 		{
-			//data<< new QStandardItem(
-			model->setItem(i, j, new QStandardItem(QString::fromLocal8Bit("张三")));
+			model->setItem(i, j, new QStandardItem(qsltp.at(j)));
 		}
 	}
-
-	//model->setItem(0, 0, new QStandardItem("张三"));
-	//model->setItem(0, 1, new QStandardItem("3"));
-	//model->setItem(0, 2, new QStandardItem("男"));
 
 	xtableView->setModel(model);
 
 	//qDebug("%d,%d", ntvrow, ntvline);
 	;
 	xstatusBar->showMessage(QString::fromLocal8Bit("就绪"));
-	return 0;
-}
-/******************************************************************************************************/
-void QExcelTool::OpenFile()
-{
-	//reset global variables
-	err = 0, ftype = -1, ntvline = 0, ntvrow = 0, xdec = 0;
-	xfile = nullptr;
-	xpath.clear();
-	xcontent.clear();
-	//open file
-	xpath = QFileDialog::getOpenFileName(this, QString::fromLocal8Bit("打开表格文件"), ".", QString::fromLocal8Bit("表格文件(*.csv)")).replace("/", "\\");
-	ui.textBrowser->setText(xpath);
-	if (xpath.isEmpty())
-	{
-		ui.statusBar->showMessage(QString::fromLocal8Bit("错误：未选择文件"));
-		err = QETERROR_NOFILESELECTED;
-	}
-	else
-	{
-		xfile = new QFile(xpath);
-		xfile->open(QIODevice::ReadOnly | QIODevice::Text);
-		if (!xfile->isOpen())//open file failed
-		{
-			ui.statusBar->showMessage(QString::fromLocal8Bit("错误：打开文件失败（%1)").arg(xfile->errorString()));
-			err = QETERROR_FILEOPENFAIL;
-		}
-		else
-		{
-			QString fname = xpath.mid(xpath.lastIndexOf('\\') + 1);
-			xstatusBar->showMessage(QString::fromLocal8Bit("信息：打开文件成功\t文件名：\"%1\"").arg(fname));
-			QString fext = fname.mid(fname.lastIndexOf('.') + 1);
-			ftype = (fext == "csv" ? QETFILETYPE_CSV : (fext == "xls" ? QETFILETYPE_XLS : (fext == "xlsx" ? QETFILETYPE_XLSX : -1)));
-			if (ftype == -1)
-			{
-				QMessageBox::critical(this, "ERROR", "Unknown Error");
-				QApplication::quit();
-			}
-			err = QETERROR_NOERROR;
-			CreateThread(NULL, 0, ReadFile, NULL, NULL, NULL);
-		}
-	}
-}
-/******************************************************************************************************/
-void QExcelTool::ChangeDec()
-{
-	xdec += 1;
-	xdec %= QETDECODER_DECCOUNT;
-	xqpb->setText(QString::fromLocal8Bit("切换编码(%1)").arg(xdec));
-	if (isempty(xpath))
-		return;
-	CreateThread(NULL, 0, FileProcess, NULL, NULL, NULL);
-}
-/******************************************************************************************************/
-//new thread
-DWORD WINAPI ReadFile(LPVOID param)
-{
-	xstatusBar->showMessage(QString::fromLocal8Bit("信息：读取文件...\t文件名：\"%1\"").arg(xpath));
-	xcontent = xfile->readAll();
-	xfile->close();
-	xstatusBar->showMessage(QString::fromLocal8Bit("就绪"));
-	CreateThread(NULL, 0, FileProcess, NULL, NULL, NULL);
 	return 0;
 }
