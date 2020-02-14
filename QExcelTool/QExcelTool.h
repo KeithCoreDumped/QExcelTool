@@ -24,7 +24,7 @@
 #define QETDECODER_LATIN1		3
 #define QETDECODER_DECCOUNT		4
 
-extern int err, ntvline, ntvrow;
+extern int err, ntvrow, ntvcolumn;
 extern QStatusBar* xstatusBar;
 extern QFile* xfile;
 extern QString xpath;

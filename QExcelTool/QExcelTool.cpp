@@ -7,7 +7,7 @@
 #include <QTextStream>
 #include <QTextCodec>
 
-int err = 0, ntvline = 0, ntvrow = 0, xdec = 0;
+int err = QETERROR_NOFILESELECTED, ntvrow = 0, ntvcolumn = 0, xdec = 0, fponstuff = 0, comboBoxlastIndex = 0;
 QStatusBar* xstatusBar = nullptr;
 QFile* xfile = nullptr;
 QTableView* xtableView = nullptr;
@@ -25,9 +25,7 @@ typedef enum tagTextCodeType
 	TextUNICODE,
 	TextUNICODE_BIG
 }TextCodeType;
-
 TextCodeType xftype = TextUnkonw;
-
 /******************************************************************************************************/
 inline bool isempty(QString src)
 {
@@ -43,10 +41,10 @@ QExcelTool::QExcelTool(QWidget* parent)
 	xfile = nullptr;
 	xtableView = ui.tableView;
 	connect(ui.pushButton_1, SIGNAL(clicked()), this, SLOT(OpenFile()));
-	QObject::connect(ui.comboBox, SIGNAL(activated(const QString&)), this, SLOT(oncomboBoxcurrentIndexChanged(const QString&)));
+	connect(ui.comboBox, SIGNAL(activated(const QString&)), this, SLOT(oncomboBoxcurrentIndexChanged(const QString&)));
 
 	xstatusBar = ui.statusBar;
-	ui.comboBox->setVisible(0);
+	//ui.comboBox->setVisible(0);
 	ui.statusBar->showMessage(QString::fromLocal8Bit("就绪"));
 	ui.textBrowser->setToolTipDuration(1000);
 	model = new QStandardItemModel();
@@ -56,21 +54,22 @@ QExcelTool::QExcelTool(QWidget* parent)
 	//ui.tableView->show();
 }
 /******************************************************************************************************/
-QString getlinename(unsigned int i)
+QString getcolumnname(unsigned int i)
 {
 	///STACK OVERFLOW
 	static QString rst;
 	if (i < 26)
 		return QString(0x41 + i);
 	else
-		return getlinename(i / 26 - 1) + QString(0x41 + i % 26);
+		return getcolumnname(i / 26 - 1) + QString(0x41 + i % 26);
 }
 /******************************************************************************************************/
 void QExcelTool::OpenFile()
 {
 	//reset global variables
-	err = 0, ntvline = 0, ntvrow = 0, xdec = 0;
+	err = QETERROR_NOFILESELECTED, ntvrow = 0, ntvcolumn = 0, xdec = 0;
 	xfile = nullptr;
+	xcomboBox = ui.comboBox;
 	xpath.clear();
 	xcontent.clear();
 	//open file
@@ -109,16 +108,23 @@ void QExcelTool::OpenFile()
 /******************************************************************************************************/
 void QExcelTool::oncomboBoxcurrentIndexChanged(const QString& arg1)
 {
+	if (fponstuff)
+	{
+		ui.comboBox->setCurrentIndex(comboBoxlastIndex);
+		return;
+	}
 	if (QString::compare(arg1, "ANSI") == 0)
 		xftype = TextANSI;
 	else if (QString::compare(arg1, "UTF-8") == 0)
 		xftype = TextUTF8;
-	else if (QString::compare(arg1, "UTF-16") == 0)
+	else if (QString::compare(arg1, "UTF-16LE") == 0)
 		xftype = TextUNICODE;
 	else if (QString::compare(arg1, "UTF-16BE") == 0)
 		xftype = TextUNICODE_BIG;
-	if (xfile && xfile->isOpen())
-		CreateThread(NULL, 0, FileProcess, NULL, NULL, NULL);
+	comboBoxlastIndex = xcomboBox->currentIndex();
+	if ((!err))
+		FileProcess(0);
+		//CreateThread(NULL, 0, FileProcess, NULL, NULL, NULL);
 }
 /******************************************************************************************************/
 //new thread
@@ -147,18 +153,20 @@ DWORD WINAPI ReadFile(LPVOID param)
 /******************************************************************************************************/
 DWORD WINAPI FileProcess(LPVOID param)
 {
+	xstatusBar->showMessage(QString::fromLocal8Bit("信息：正在处理..."));
 	QString tabletitle;
 	QStringList qsl, title, linetitle, rowtitle;
+	model->clear();
 	switch (xftype)
 	{
 	case TextUTF8:
 		xcodec = QTextCodec::codecForName("UTF-8");
 		break;
 	case TextUNICODE:
-		xcodec = QTextCodec::codecForName("UTF-16");
+		xcodec = QTextCodec::codecForName("UTF-16LE");
 		break;
 	case TextUNICODE_BIG:
-		xcodec = QTextCodec::codecForName("UTF-16LE");
+		xcodec = QTextCodec::codecForName("UTF-16BE");
 		break;
 	case TextANSI:
 		xcodec = QTextCodec::codecForName("GBK");
@@ -177,7 +185,7 @@ DWORD WINAPI FileProcess(LPVOID param)
 		rmax = 0;
 		for (int j = 0; j < qsl.at(i).length(); j++)
 			rmax += (qsl.at(i).at(j) == ',');
-		ntvrow = ntvrow > rmax ? ntvrow : rmax;
+		ntvcolumn = ntvcolumn > rmax ? ntvcolumn : rmax;
 		//get tabletitle
 		QStringList lline = qsl.at(i).split(',');
 		int size = lline.size();
@@ -195,33 +203,28 @@ DWORD WINAPI FileProcess(LPVOID param)
 				lline.replace(j + 1, lline.at(j));
 		qsl.replace(i, lline.join(','));
 	}
-	ntvline = qsl.size() + 1;
+	ntvrow = qsl.size() + 1;
 	tabletitle = title.join(' ');
 	title.clear();
-
-	model->setColumnCount(ntvrow);
-	model->setRowCount(ntvline);
-	QStringList linename, rowname, qsltp;
-	QString qstp;
-	for (int i = 1; i < ntvline; i++)
-		model->setHeaderData(i - 1, Qt::Vertical, QString::fromLocal8Bit("列") + QString::number(i));
+	ntvcolumn++;
+	model->setColumnCount(ntvcolumn);
+	model->setRowCount(ntvrow);
+	QStringList qsltp;
 	for (int i = 0; i < ntvrow; i++)
-		model->setHeaderData(i, Qt::Horizontal, QString::fromLocal8Bit("行") + getlinename(i));
+		model->setHeaderData(i, Qt::Vertical, QString::fromLocal8Bit("列") + QString::number(i + 1));
+	for (int i = 0; i < ntvcolumn + 1; i++)
+		model->setHeaderData(i, Qt::Horizontal, QString::fromLocal8Bit("行") + getcolumnname(i));
 
-	for (int i = 0; i < ntvline - 1; i++)
+	for (int i = 0; i < ntvrow - 1; i++)
 	{
-		qstp = qsl.at(i);
-		qsltp = qstp.split(',');
-		for (int j = 0; j < qsltp.size(); j++)
-		{
+		qsltp = qsl.at(i).split(',');
+		temp = qsltp.size();
+		for (int j = 0; j < temp; j++)
 			model->setItem(i, j, new QStandardItem(qsltp.at(j)));
-		}
 	}
 
 	xtableView->setModel(model);
-
-	//qDebug("%d,%d", ntvrow, ntvline);
-	;
+	xcomboBox->setEnabled(1);
 	xstatusBar->showMessage(QString::fromLocal8Bit("就绪"));
 	return 0;
 }

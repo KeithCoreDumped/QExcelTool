@@ -7,13 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>1062</width>
-    <height>799</height>
+    <height>754</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>1062</width>
-    <height>799</height>
+    <height>0</height>
    </size>
   </property>
   <property name="maximumSize">
@@ -48,6 +48,9 @@
       <height>31</height>
      </rect>
     </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;从这里开始&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
     <property name="text">
      <string>浏览...</string>
     </property>
@@ -69,7 +72,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>100</y>
+      <y>90</y>
       <width>1021</width>
       <height>371</height>
      </rect>
@@ -79,7 +82,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>80</y>
+      <y>70</y>
       <width>121</width>
       <height>18</height>
      </rect>
@@ -92,10 +95,13 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>480</y>
-      <width>115</width>
+      <y>470</y>
+      <width>101</width>
       <height>31</height>
      </rect>
+    </property>
+    <property name="toolTip">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;当出现乱码时调整&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <item>
      <property name="text">
@@ -109,7 +115,7 @@
     </item>
     <item>
      <property name="text">
-      <string>UTF-16</string>
+      <string>UTF-16LE</string>
      </property>
     </item>
     <item>
@@ -118,22 +124,12 @@
      </property>
     </item>
    </widget>
-   <widget class="QTextBrowser" name="textBrowser_2">
-    <property name="geometry">
-     <rect>
-      <x>250</x>
-      <y>570</y>
-      <width>451</width>
-      <height>71</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QRadioButton" name="radioButton">
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>550</y>
-      <width>132</width>
+      <y>520</y>
+      <width>71</width>
       <height>22</height>
      </rect>
     </property>
@@ -145,13 +141,52 @@
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>580</y>
-      <width>132</width>
+      <y>550</y>
+      <width>71</width>
       <height>22</height>
      </rect>
     </property>
     <property name="text">
      <string>图片</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="NextButton">
+    <property name="geometry">
+     <rect>
+      <x>930</x>
+      <y>640</y>
+      <width>112</width>
+      <height>34</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>下一个</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="LastButton">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>640</y>
+      <width>112</width>
+      <height>34</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>上一个</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="EditButton">
+    <property name="geometry">
+     <rect>
+      <x>930</x>
+      <y>470</y>
+      <width>112</width>
+      <height>34</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>编辑...</string>
     </property>
    </widget>
    <zorder>comboBox</zorder>
@@ -160,9 +195,11 @@
    <zorder>textBrowser</zorder>
    <zorder>tableView</zorder>
    <zorder>label_2</zorder>
-   <zorder>textBrowser_2</zorder>
    <zorder>radioButton</zorder>
    <zorder>radioButton_2</zorder>
+   <zorder>NextButton</zorder>
+   <zorder>LastButton</zorder>
+   <zorder>EditButton</zorder>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
