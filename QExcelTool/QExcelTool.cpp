@@ -4,10 +4,10 @@
 #include <QImage>
 #include <QStandardItemModel>
 #include <QFileDialog>
-#include <QTextStream>
 #include <QTextCodec>
 
-int err = QETERROR_NOFILESELECTED, ntvrow = 0, ntvcolumn = 0, xdec = 0, fponstuff = 0, comboBoxlastIndex = 0;
+int err = QETERROR_NOFILESELECTED, ntvrow = 0, ntvcolumn = 0, xdec = 0;
+int fponstuff = 0, comboBoxlastIndex = 0, qtvedited = 0;
 QStatusBar* xstatusBar = nullptr;
 QFile* xfile = nullptr;
 QTableView* xtableView = nullptr;
@@ -180,6 +180,7 @@ DWORD WINAPI FileProcess(LPVOID param)
 	qsl = xcontent.split('\n', QString::SkipEmptyParts);
 	size_t ssize = xcontent.length();
 	int rmax = 0, temp = 0;
+	ntvcolumn = 0, ntvrow = 0;
 	for (int i = 0; i < qsl.size(); i++)
 	{
 		rmax = 0;
@@ -224,7 +225,6 @@ DWORD WINAPI FileProcess(LPVOID param)
 	}
 
 	xtableView->setModel(model);
-	xcomboBox->setEnabled(1);
 	xstatusBar->showMessage(QString::fromLocal8Bit("¾ÍÐ÷"));
 	return 0;
 }
